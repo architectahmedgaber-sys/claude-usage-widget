@@ -37,7 +37,6 @@ abstract class ChartWidget(private val kind: String) : GlanceAppWidget() {
 
 class SessionWidget : ChartWidget(Kind.SESSION)
 class WeekWidget : ChartWidget(Kind.WEEK)
-class PaceWidget : ChartWidget(Kind.PACE)
 class AllWidget : ChartWidget(Kind.ALL)
 
 class SessionWidgetReceiver : GlanceAppWidgetReceiver() {
@@ -48,10 +47,6 @@ class WeekWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = WeekWidget()
 }
 
-class PaceWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = PaceWidget()
-}
-
 class AllWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = AllWidget()
 }
@@ -60,7 +55,7 @@ private fun emptyMessage(d: WData, kind: String, hasUsage: Boolean, hasData: Boo
     !d.state.signedIn -> Tx.t("افتح التطبيق وسجّل دخولك", "Open the app and sign in")
     hasUsage && !hasData -> Tx.t("الخطة مفيهاش نسب استخدام", "No usage figures for this plan")
     hasUsage && kind == Kind.ALL -> Tx.t("اختار اللي يظهر من إعدادات التطبيق", "Choose what to show in the app's Settings")
-    hasUsage && (kind == Kind.WEEK || kind == Kind.PACE) -> Tx.t("لسه مفيش أرقام للأسبوع", "No weekly numbers yet")
+    hasUsage && kind == Kind.WEEK -> Tx.t("لسه مفيش أرقام للأسبوع", "No weekly numbers yet")
     else -> Tx.t("لسه مفيش أرقام", "No numbers yet")
 }
 

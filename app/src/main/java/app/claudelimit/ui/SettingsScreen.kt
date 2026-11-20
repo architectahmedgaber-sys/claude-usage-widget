@@ -81,16 +81,8 @@ fun SettingsScreen(s: Settings, state: StoreState, signedIn: Boolean, onBack: ()
                 )
                 Toggle(tt("الخمس ساعات", "5-hour limit"), s.showSession) { v -> change { it.copy(showSession = v) } }
                 Toggle(tt("الأسبوع", "Weekly limit"), s.showWeek) { v -> change { it.copy(showWeek = v) } }
-                Toggle(
-                    tt("الخطة الأسبوعية", "Weekly plan"), s.showPace,
-                    tt("المفروض تكون خلصت قد إيه النهارده", "How much you should have used by today"),
-                ) { v -> change { it.copy(showPace = v) } }
                 Toggle(tt("وقت التصفير", "Time until reset"), s.showReset) { v -> change { it.copy(showReset = v) } }
                 Toggle(tt("آخر تحديث", "Last updated"), s.showUpdated) { v -> change { it.copy(showUpdated = v) } }
-                Toggle(
-                    tt("اعرض المستخدم بدل الفاضل", "Show used instead of left"), s.showUsed,
-                    tt("الافتراضي إنه يعرض الفاضل", "By default it shows what is left"),
-                ) { v -> change { it.copy(showUsed = v) } }
             }
 
             SectionCard {
@@ -220,8 +212,8 @@ private fun WidgetLookCard(s: Settings, state: StoreState, change: ((Settings) -
         Gap(4)
         Text(
             tt(
-                "العلامة البيضا الصغيرة هي المفروض تكون فين النهارده حسب الخطة الأسبوعية.",
-                "The small white tick marks where you should be by today, following the weekly plan.",
+                "العلامة البيضا الصغيرة هي المكان اللي المفروض تكون واصله دلوقتي لو الأسبوع متقسم بالتساوي على ساعاته.",
+                "The small white tick marks where you should be right now if the week were spread evenly over its hours.",
             ),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -232,7 +224,6 @@ private fun WidgetLookCard(s: Settings, state: StoreState, change: ((Settings) -
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             WidgetPreview(Kind.SESSION, s, state, 110f, 110f, Modifier.weight(1f))
             WidgetPreview(Kind.WEEK, s, state, 110f, 110f, Modifier.weight(1f))
-            WidgetPreview(Kind.PACE, s, state, 110f, 110f, Modifier.weight(1f))
         }
         Gap(14)
         Text(tt("الخمس ساعات", "5 hours"))
@@ -242,10 +233,6 @@ private fun WidgetLookCard(s: Settings, state: StoreState, change: ((Settings) -
         Text(tt("الأسبوع", "Weekly"))
         Gap(6)
         Choices(WidgetStyles.names, s.styleWeek, { styleName(it) }) { v -> change { it.copy(styleWeek = v) } }
-        Gap(12)
-        Text(tt("الخطة", "Plan"))
-        Gap(6)
-        Choices(WidgetStyles.names, s.stylePace, { styleName(it) }) { v -> change { it.copy(stylePace = v) } }
         Gap(12)
         Text(tt("الكل في ويدجت", "All in one"))
         Gap(6)

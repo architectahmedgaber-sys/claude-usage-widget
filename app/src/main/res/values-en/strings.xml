@@ -2,12 +2,10 @@
     <string name="app_name">Claude Limit</string>
     <string name="widget_session">5 hours</string>
     <string name="widget_week">Weekly</string>
-    <string name="widget_pace">Weekly pace</string>
     <string name="widget_all">All in one</string>
-    <string name="widget_session_desc">What is left of your 5-hour limit and when it resets</string>
-    <string name="widget_week_desc">What is left of your weekly limit and when it resets</string>
-    <string name="widget_pace_desc">How much you should have used by today, and how much you have</string>
-    <string name="widget_all_desc">5 hours, weekly and pace; choose what shows in Settings</string>
+    <string name="widget_session_desc">How much of your 5-hour limit you used and when it resets</string>
+    <string name="widget_week_desc">How much of your weekly limit you used and when it resets</string>
+    <string name="widget_all_desc">5 hours and weekly in one widget</string>
     <string name="refresh_channel">Refreshing numbers</string>
     <string name="refresh_title">Updating your limit numbers</string>
 </resources>

@@ -15,14 +15,11 @@ data class Settings(
     /** One of WidgetStyles.names, chosen per widget. */
     val styleSession: String = "RINGS",
     val styleWeek: String = "BATTERIES",
-    val stylePace: String = "BARS",
     val styleAll: String = "BARS",
     val showSession: Boolean = true,
     val showWeek: Boolean = true,
-    val showPace: Boolean = true,
     val showReset: Boolean = true,
     val showUpdated: Boolean = true,
-    val showUsed: Boolean = false,
     val refreshMinutes: Int = 15,
 )
 
@@ -66,14 +63,11 @@ object Store {
             bgAlpha = p.getInt("bgAlpha", d.bgAlpha),
             styleSession = p.getString("styleSession", d.styleSession) ?: d.styleSession,
             styleWeek = p.getString("styleWeek", d.styleWeek) ?: d.styleWeek,
-            stylePace = p.getString("stylePace", d.stylePace) ?: d.stylePace,
             styleAll = p.getString("styleAll", d.styleAll) ?: d.styleAll,
             showSession = p.getBoolean("showSession", d.showSession),
             showWeek = p.getBoolean("showWeek", d.showWeek),
-            showPace = p.getBoolean("showPace", d.showPace),
             showReset = p.getBoolean("showReset", d.showReset),
             showUpdated = p.getBoolean("showUpdated", d.showUpdated),
-            showUsed = p.getBoolean("showUsed", d.showUsed),
             refreshMinutes = p.getInt("refreshMinutes", d.refreshMinutes),
         )
         state.value = StoreState(
@@ -96,14 +90,11 @@ object Store {
             .putInt("bgAlpha", s.bgAlpha)
             .putString("styleSession", s.styleSession)
             .putString("styleWeek", s.styleWeek)
-            .putString("stylePace", s.stylePace)
             .putString("styleAll", s.styleAll)
             .putBoolean("showSession", s.showSession)
             .putBoolean("showWeek", s.showWeek)
-            .putBoolean("showPace", s.showPace)
             .putBoolean("showReset", s.showReset)
             .putBoolean("showUpdated", s.showUpdated)
-            .putBoolean("showUsed", s.showUsed)
             .putInt("refreshMinutes", s.refreshMinutes)
             .apply()
     }

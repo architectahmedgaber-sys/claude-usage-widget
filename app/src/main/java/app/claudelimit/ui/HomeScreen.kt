@@ -38,7 +38,6 @@ import app.claudelimit.Tx
 import app.claudelimit.core.Limit
 import app.claudelimit.core.Pace
 import app.claudelimit.core.PaceCalc
-import app.claudelimit.core.PaceStatus
 import app.claudelimit.core.TimeText
 import app.claudelimit.tt
 import kotlinx.coroutines.delay
@@ -94,8 +93,7 @@ fun HomeScreen(
                     val pace = weekly?.let { PaceCalc.compute(it, now) }
                     if (s.showSession && session != null) SessionCard(session, now, s)
                     if (s.showWeek && weekly != null) WeekCard(weekly, pace, now, s)
-                    if (s.showPace && pace != null) PaceCard(pace)
-                    if (!s.showSession && !s.showWeek && !s.showPace) {
+                    if (!s.showSession && !s.showWeek) {
                         SectionCard {
                             Text(tt("مفيش حاجة مختارة تظهر. اختار من الإعدادات.", "Nothing is chosen to show. Pick from Settings."))
                         }
@@ -159,7 +157,7 @@ private fun Header(plan: String, onSettings: () -> Unit) {
 
 @Composable
 private fun SessionCard(limit: Limit, now: Long, s: Settings) {
-    val shown = if (s.showUsed) limit.usedPercent else limit.remainingPercent
+    val shown = limit.usedPercent
     val color = levelColor(limit.usedPercent)
     SectionCard {
         Label(tt("الخمس ساعات", "5-hour limit"))
@@ -172,7 +170,7 @@ private fun SessionCard(limit: Limit, now: Long, s: Settings) {
         ) {
             Big("${shown.roundToInt()}%", color, 40)
             Text(
-                if (s.showUsed) tt("مستخدم", "used") else tt("فاضل", "left"),
+                tt("مستخدم", "used"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
             )
@@ -181,7 +179,7 @@ private fun SessionCard(limit: Limit, now: Long, s: Settings) {
         if (s.showReset && r != null) {
             Gap(4)
             Text(
-                tt("بتتصفّر بعد ${TimeText.left(r - now, true)}", "Resets in ${TimeText.left(r - now, false)}"),
+                tt("فاضل ${TimeText.left(r - now, true)} على التجديد", "${TimeText.left(r - now, false)} until reset"),
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -192,16 +190,16 @@ private fun SessionCard(limit: Limit, now: Long, s: Settings) {
 
 @Composable
 private fun WeekCard(limit: Limit, pace: Pace?, now: Long, s: Settings) {
-    val shown = if (s.showUsed) limit.usedPercent else limit.remainingPercent
+    val shown = limit.usedPercent
     val color = levelColor(limit.usedPercent)
-    val marker = pace?.let { ((if (s.showUsed) it.expectedUsed else 100.0 - it.expectedUsed) / 100.0).toFloat() }
+    val marker = pace?.let { (it.expectedUsed / 100.0).toFloat() }
     SectionCard {
-        Label(if (pace != null) tt("الأسبوع · يوم ${pace.dayNumber} من 7", "Weekly limit · day ${pace.dayNumber} of 7") else tt("الأسبوع", "Weekly limit"))
+        Label(if (pace != null) tt("الأسبوع · الساعة ${(pace.expectedUsed * 1.68).toInt() + 1} من 168", "Weekly limit · hour ${(pace.expectedUsed * 1.68).toInt() + 1} of 168") else tt("الأسبوع", "Weekly limit"))
         Gap(4)
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Big("${shown.roundToInt()}%", color, 36)
             Text(
-                if (s.showUsed) tt("مستخدم", "used") else tt("فاضل", "left"),
+                tt("مستخدم", "used"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 6.dp),
             )
@@ -212,53 +210,11 @@ private fun WeekCard(limit: Limit, pace: Pace?, now: Long, s: Settings) {
         if (s.showReset && r != null) {
             Gap(6)
             Text(
-                tt("بتتصفّر بعد ${TimeText.left(r - now, true)}", "Resets in ${TimeText.left(r - now, false)}"),
+                tt("فاضل ${TimeText.left(r - now, true)} على التجديد", "${TimeText.left(r - now, false)} until reset"),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-    }
-}
-
-@Composable
-private fun PaceCard(p: Pace) {
-    val color = when {
-        p.status != PaceStatus.OVER -> levelColor(0.0)
-        p.diff > 15.0 -> levelColor(90.0)
-        else -> levelColor(60.0)
-    }
-    val n = abs(p.diff).roundToInt()
-    val status = when (p.status) {
-        PaceStatus.OVER -> tt("أعلى من المفروض بـ $n%", "$n% ahead of the plan")
-        PaceStatus.UNDER -> tt("أقل من المفروض بـ $n%", "$n% under the plan")
-        PaceStatus.ON_TRACK -> tt("ماشي مظبوط", "Right on plan")
-    }
-    SectionCard {
-        Label(tt("الخطة الأسبوعية · يوم ${p.dayNumber} من 7", "Weekly plan · day ${p.dayNumber} of 7"))
-        Gap(8)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(Modifier.weight(1f)) {
-                Text(tt("المفروض تكون خلصت", "You should have used"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Big("${p.expectedUsed.roundToInt()}%", size = 28)
-            }
-            Column(Modifier.weight(1f)) {
-                Text(tt("انت خلصت", "You have used"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Big("${p.actualUsed.roundToInt()}%", color, 28)
-            }
-        }
-        Gap(10)
-        PaceBar((p.actualUsed / 100.0).toFloat(), (p.expectedUsed / 100.0).toFloat(), color)
-        Gap(10)
-        Tag(status, color)
-        Gap(8)
-        Text(
-            tt(
-                "تقدر تستهلك ${p.safePerDay.roundToInt()}% في اليوم لحد ما الأسبوع يتصفّر.",
-                "You can use ${p.safePerDay.roundToInt()}% a day until the week resets.",
-            ),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 
