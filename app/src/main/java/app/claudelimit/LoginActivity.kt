@@ -4,19 +4,14 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ClipboardManager
 import android.content.Intent
-import android.content.pm.verify.domain.DomainVerificationManager
-import android.content.pm.verify.domain.DomainVerificationUserState
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
-import android.provider.Settings as AndroidSettings
-import android.view.View
 import android.webkit.CookieManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import app.claudelimit.net.WebFetcher
@@ -25,14 +20,14 @@ import app.claudelimit.work.Ticker
 
 /**
  * The real claude.ai sign-in page; it closes by itself as soon as the session cookie appears.
- * Email sign-in links reach it in two ways:
- *  1. opened straight from the mail app (allow claude.ai links for this app once in Android settings);
- *  2. copied to the clipboard: picked up as soon as you come back here.
+ *
+ * Signing in with email is easiest this way: the link in the email opens in the browser and shows a 6-digit
+ * code, which is typed into the code box on this page. Nothing needs to be set up. If the link does open here
+ * (allowed in Android settings, or copied to the clipboard), that works too.
  * The flow follows the open-source "Limits for Claude" app (MIT).
  */
 class LoginActivity : Activity() {
     private lateinit var web: WebView
-    private lateinit var linkBtn: Button
     private var done = false
     private var lastClip: String? = null
 
@@ -45,17 +40,17 @@ class LoginActivity : Activity() {
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         root.addView(TextView(this).apply {
             text = Tx.t(
-                "سجّل دخولك بحساب Claude. لو بتدخل بالإيميل: افتح الرابط اللي هيوصلك، أو انسخه وارجع هنا وهيتفتح لوحده.",
-                "Sign in with your Claude account. If you use email: open the link you get, or copy it and come back here and it opens by itself.",
+                "١) اكتب إيميلك واضغط المتابعة بالإيميل.\n٢) افتح الإيميل واضغط الرابط: هيفتح في المتصفح ويطلعلك كود من 6 أرقام.\n٣) ارجع هنا واكتب الكود في الخانة.\nلو بتدخل بجوجل: اضغط المتابعة بجوجل.",
+                "1) Enter your email and continue with email.\n2) Open the email and tap the link: it opens in your browser and shows a 6-digit code.\n3) Come back here and type the code in the box.\nWith Google: tap Continue with Google.",
             )
-            textSize = 13f
+            textSize = 14f
+            setLineSpacing(0f, 1.15f)
             setPadding(pad, pad / 2, pad, pad / 2)
         })
-        linkBtn = Button(this).apply {
-            text = Tx.t("اسمح بفتح روابط claude.ai هنا", "Allow claude.ai links to open here")
-            setOnClickListener { openLinkSettings() }
-        }
-        root.addView(linkBtn)
+        root.addView(Button(this).apply {
+            text = Tx.t("افتح الإيميل", "Open email app")
+            setOnClickListener { openMailApp() }
+        })
         web = WebView(this)
         root.addView(web, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
         // Android draws apps edge to edge, so keep the page clear of the status bar and keyboard.
@@ -77,17 +72,33 @@ class LoginActivity : Activity() {
                 check(url)
             }
         }
-        web.loadUrl(linkFrom(intent) ?: "https://claude.ai/login")
+        // Going to the mail app and back can reset the page, so the page is restored when we return.
+        val link = linkFrom(intent)
+        if (link == null && savedInstanceState != null && web.restoreState(savedInstanceState) != null) {
+            // restored
+        } else {
+            web.loadUrl(link ?: "https://claude.ai/login")
+        }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        web.saveState(outState)
+    }
+
+    private fun openMailApp() {
+        try {
+            startActivity(Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_EMAIL).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            })
+        } catch (e: Exception) {
+            Toast.makeText(this, Tx.t("افتح تطبيق الإيميل بنفسك.", "Open your email app yourself."), Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         linkFrom(intent)?.let { web.loadUrl(it) }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        linkBtn.visibility = if (needsLinkSetting()) View.VISIBLE else View.GONE
     }
 
     /** The clipboard can be read only while the window has focus. */
@@ -110,17 +121,6 @@ class LoginActivity : Activity() {
         if (url == lastClip) return
         lastClip = url
         web.loadUrl(url)
-    }
-
-    private fun needsLinkSetting(): Boolean {
-        if (Build.VERSION.SDK_INT < 31) return false
-        val st = getSystemService(DomainVerificationManager::class.java)?.getDomainVerificationUserState(packageName) ?: return false
-        return st.hostToStateMap["claude.ai"] == DomainVerificationUserState.DOMAIN_STATE_NONE
-    }
-
-    private fun openLinkSettings() {
-        if (Build.VERSION.SDK_INT < 31) return
-        startActivity(Intent(AndroidSettings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS, Uri.parse("package:$packageName")))
     }
 
     private fun check(url: String) {
