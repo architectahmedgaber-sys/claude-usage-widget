@@ -8,7 +8,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 /** What the person chose to see. Everything is on by default except "used instead of left". */
 data class Settings(
     val lang: String = "AR",
-    val theme: String = "AUTO",
+    /** One of Palettes.names. The app and the widgets both follow it. */
+    val palette: String = "AMBER",
+    /** How opaque the widget background is: 100 solid, 0 see-through. */
+    val bgAlpha: Int = 100,
+    /** One of WidgetStyles.names, chosen per widget. */
+    val styleSession: String = "RINGS",
+    val styleWeek: String = "BATTERIES",
+    val stylePace: String = "BARS",
+    val styleAll: String = "BARS",
     val showSession: Boolean = true,
     val showWeek: Boolean = true,
     val showPace: Boolean = true,
@@ -54,7 +62,12 @@ object Store {
         val d = Settings()
         settings.value = Settings(
             lang = p.getString("lang", d.lang) ?: d.lang,
-            theme = p.getString("theme", d.theme) ?: d.theme,
+            palette = p.getString("palette", d.palette) ?: d.palette,
+            bgAlpha = p.getInt("bgAlpha", d.bgAlpha),
+            styleSession = p.getString("styleSession", d.styleSession) ?: d.styleSession,
+            styleWeek = p.getString("styleWeek", d.styleWeek) ?: d.styleWeek,
+            stylePace = p.getString("stylePace", d.stylePace) ?: d.stylePace,
+            styleAll = p.getString("styleAll", d.styleAll) ?: d.styleAll,
             showSession = p.getBoolean("showSession", d.showSession),
             showWeek = p.getBoolean("showWeek", d.showWeek),
             showPace = p.getBoolean("showPace", d.showPace),
@@ -79,7 +92,12 @@ object Store {
         settings.value = s
         sp(c).edit()
             .putString("lang", s.lang)
-            .putString("theme", s.theme)
+            .putString("palette", s.palette)
+            .putInt("bgAlpha", s.bgAlpha)
+            .putString("styleSession", s.styleSession)
+            .putString("styleWeek", s.styleWeek)
+            .putString("stylePace", s.stylePace)
+            .putString("styleAll", s.styleAll)
             .putBoolean("showSession", s.showSession)
             .putBoolean("showWeek", s.showWeek)
             .putBoolean("showPace", s.showPace)

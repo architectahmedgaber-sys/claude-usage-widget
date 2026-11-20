@@ -21,6 +21,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import app.claudelimit.net.WebFetcher
 import app.claudelimit.work.RefreshWorker
+import app.claudelimit.work.Ticker
 
 /**
  * The real claude.ai sign-in page; it closes by itself as soon as the session cookie appears.
@@ -129,7 +130,7 @@ class LoginActivity : Activity() {
             done = true
             CookieManager.getInstance().flush()
             Store.setSignedIn(this, true)
-            RefreshWorker.schedule(this, Store.settings.value.refreshMinutes)
+            Ticker.apply(this, Store.settings.value.refreshMinutes)
             RefreshWorker.refreshNow(this)
             if (isTaskRoot) startActivity(Intent(this, MainActivity::class.java))
             finish()

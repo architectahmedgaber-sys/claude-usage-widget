@@ -98,13 +98,16 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
             WorkManager.getInstance(context).enqueueUniquePeriodicWork("periodic", ExistingPeriodicWorkPolicy.UPDATE, req)
         }
 
-        /** Refresh right now: from the app, a widget tap, or after signing in. */
-        fun refreshNow(context: Context) {
+        /**
+         * Refresh right now: from the app, a widget tap, or after signing in.
+         * With [replace] false, a refresh that is already running is left alone (used by the minute timer).
+         */
+        fun refreshNow(context: Context, replace: Boolean = true) {
             val req = OneTimeWorkRequestBuilder<RefreshWorker>()
                 .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
                 .setConstraints(online)
                 .build()
-            WorkManager.getInstance(context).enqueueUniqueWork("now", ExistingWorkPolicy.REPLACE, req)
+            WorkManager.getInstance(context).enqueueUniqueWork("now", if (replace) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP, req)
         }
     }
 }

@@ -2,40 +2,24 @@ package app.claudelimit.widget
 
 import android.content.Context
 import android.content.Intent
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.DpSize
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.glance.GlanceModifier
+import androidx.glance.GlanceId
 import androidx.glance.action.Action
 import androidx.glance.action.ActionParameters
-import androidx.glance.action.clickable
 import androidx.glance.appwidget.action.ActionCallback
-import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
-import androidx.glance.appwidget.appWidgetBackground
-import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.updateAll
-import androidx.glance.background
-import androidx.glance.color.ColorProvider
-import androidx.glance.GlanceId
-import androidx.glance.layout.Alignment
-import androidx.glance.layout.Box
-import androidx.glance.layout.fillMaxSize
-import androidx.glance.layout.padding
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
-import androidx.glance.LocalSize
 import app.claudelimit.MainActivity
 import app.claudelimit.Settings
 import app.claudelimit.Store
 import app.claudelimit.StoreState
 import app.claudelimit.Tx
+import app.claudelimit.core.Limit
+import app.claudelimit.core.PaceCalc
+import app.claudelimit.core.PaceStatus
 import app.claudelimit.core.TimeText
+import app.claudelimit.levelOf
 import app.claudelimit.work.RefreshWorker
+import kotlin.math.roundToInt
 
 object Widgets {
     suspend fun updateAll(context: Context) {
@@ -57,89 +41,17 @@ data class WData(val settings: Settings, val state: StoreState) {
     }
 }
 
-// ---- Palette: the same greens as the app, readable on light and dark home screens ----
-val cardBg: ColorProvider = ColorProvider(day = Color(0xFFFBFDF9), night = Color(0xFF232A26))
-val inkColor: ColorProvider = ColorProvider(day = Color(0xFF18231D), night = Color(0xFFEEF4EE))
-val subColor: ColorProvider = ColorProvider(day = Color(0xFF5C6B62), night = Color(0xFFAAB8AE))
-val goodColor: ColorProvider = ColorProvider(day = Color(0xFF1F7A3F), night = Color(0xFF8FD8A4))
-val warnColor: ColorProvider = ColorProvider(day = Color(0xFF9A6B00), night = Color(0xFFFFC94D))
-val badColor: ColorProvider = ColorProvider(day = Color(0xFFB3261E), night = Color(0xFFF2B8B5))
-val trackColor: ColorProvider = ColorProvider(day = Color(0xFFDCE8DF), night = Color(0xFF38433C))
-
-// Fixed colours for drawings (bitmaps can't follow light/dark, so these work on both).
-const val RING_GREEN = 0xFF2E9E6E.toInt()
-const val RING_AMBER = 0xFFE0A000.toInt()
-const val RING_RED = 0xFFD9453B.toInt()
-
-/** 0 = fine (under 50% used), 1 = careful (under 80%), 2 = nearly out. */
-fun levelOf(usedPercent: Double): Int = when {
-    usedPercent >= 80.0 -> 2
-    usedPercent >= 50.0 -> 1
-    else -> 0
-}
-
-fun ringColor(usedPercent: Double): Int = when (levelOf(usedPercent)) {
-    2 -> RING_RED
-    1 -> RING_AMBER
-    else -> RING_GREEN
-}
-
-fun textColor(usedPercent: Double): ColorProvider = when (levelOf(usedPercent)) {
-    2 -> badColor
-    1 -> warnColor
-    else -> goodColor
-}
-
 fun openApp(context: Context): Action =
     actionStartActivity(Intent(context, MainActivity::class.java).apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
     })
 
-/** The small refresh button in the corner of every widget. */
+/** The refresh tap in the corner of a widget. */
 class RefreshAction : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         RefreshWorker.refreshNow(context)
     }
 }
-
-/** The rounded card every widget sits on. */
-@Composable
-fun WidgetCard(context: Context, content: @Composable () -> Unit) {
-    val size = LocalSize.current
-    val compact = size.height < 90.dp || size.width < 90.dp
-    Box(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .appWidgetBackground()
-            .cornerRadius(26.dp)
-            .background(cardBg)
-            .clickable(openApp(context))
-            .padding(if (compact) 8.dp else 14.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        content()
-    }
-}
-
-@Composable
-fun label(text: String, size: Int = 12, color: ColorProvider? = null) = Text(
-    text,
-    maxLines = 1,
-    style = TextStyle(color = color ?: subColor, fontSize = size.sp),
-)
-
-@Composable
-fun value(text: String, size: Int = 24, color: ColorProvider? = null) = Text(
-    text,
-    maxLines = 1,
-    style = TextStyle(color = color ?: inkColor, fontSize = size.sp, fontWeight = FontWeight.Bold),
-)
-
-@Composable
-fun Note(text: String) = Text(
-    text,
-    style = TextStyle(color = inkColor, fontSize = 13.sp, fontWeight = FontWeight.Medium),
-)
 
 /** "قبل 5 د", with a warning sign when the numbers are old or the last try failed. */
 fun updatedText(d: WData, now: Long): String {
@@ -150,6 +62,62 @@ fun updatedText(d: WData, now: Long): String {
     return (if (stale) "⚠ " else "") + ago
 }
 
-/** A ring size that fits the widget with room for [reserve] dp of text under it. */
-fun ringSizeFor(size: DpSize, reserve: Int): androidx.compose.ui.unit.Dp =
-    minOf(size.width.value - 28f, size.height.value - 28f - reserve).coerceIn(40f, 120f).dp
+/** Which widget a set of items is for. */
+object Kind {
+    const val SESSION = "SESSION"
+    const val WEEK = "WEEK"
+    const val PACE = "PACE"
+    const val ALL = "ALL"
+}
+
+/** Turns the numbers into the things a widget draws, following the person's choices. */
+fun buildItems(kind: String, session: Limit?, weekly: Limit?, s: Settings, now: Long): List<DrawItem> {
+    fun limitItem(title: String, l: Limit, expectedUsed: Double?, segs: Int): DrawItem {
+        val shown = if (s.showUsed) l.usedPercent else l.remainingPercent
+        val r = l.resetsAtMs
+        val sub = if (s.showReset && r != null) {
+            Tx.t("بعد ${TimeText.left(r - now, true)}", "in ${TimeText.left(r - now, false)}")
+        } else ""
+        val marker = expectedUsed?.let { e -> ((if (s.showUsed) e else 100.0 - e) / 100.0).toFloat() }
+        return DrawItem(title, "${shown.roundToInt()}%", (shown / 100.0).toFloat().coerceIn(0f, 1f), levelOf(l.usedPercent), marker, sub, segs)
+    }
+
+    val pace = weekly?.let { PaceCalc.compute(it, now) }
+    val sessionItem = session?.let { limitItem(Tx.t("5 ساعات", "5 hours"), it, null, 10) }
+    val weekItem = weekly?.let { limitItem(Tx.t("الأسبوع", "Weekly"), it, pace?.expectedUsed, 7) }
+    val paceItem = pace?.let { p ->
+        val n = p.diff.roundToInt()
+        val value = if (n > 0) "+$n%" else "$n%"
+        val level = when {
+            p.status != PaceStatus.OVER -> 0
+            p.diff > 15.0 -> 2
+            else -> 1
+        }
+        DrawItem(
+            Tx.t("الخطة", "Plan"),
+            value,
+            (p.actualUsed / 100.0).toFloat().coerceIn(0f, 1f),
+            level,
+            (p.expectedUsed / 100.0).toFloat().coerceIn(0f, 1f),
+            Tx.t("يوم ${p.dayNumber} · المفروض ${p.expectedUsed.roundToInt()}%", "day ${p.dayNumber} · plan ${p.expectedUsed.roundToInt()}%"),
+            7,
+        )
+    }
+    return when (kind) {
+        Kind.SESSION -> listOfNotNull(sessionItem)
+        Kind.WEEK -> listOfNotNull(weekItem)
+        Kind.PACE -> listOfNotNull(paceItem)
+        else -> buildList {
+            if (s.showSession && sessionItem != null) add(sessionItem)
+            if (s.showWeek && weekItem != null) add(weekItem)
+            if (s.showPace && paceItem != null) add(paceItem)
+        }
+    }
+}
+
+fun styleFor(kind: String, s: Settings): String = when (kind) {
+    Kind.SESSION -> s.styleSession
+    Kind.WEEK -> s.styleWeek
+    Kind.PACE -> s.stylePace
+    else -> s.styleAll
+}

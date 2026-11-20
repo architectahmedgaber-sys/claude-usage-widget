@@ -1,11 +1,15 @@
 package app.claudelimit.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -14,7 +18,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,7 +26,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.claudelimit.Settings
 import app.claudelimit.Store
 import app.claudelimit.StoreState
@@ -57,17 +64,13 @@ fun HomeScreen(
     val usage = remember(state.body, state.fetchedAtMs, state.plan) { state.usage() }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(tt("ليميت كلود", "Claude Limit")) },
-                actions = { TextButton(onClick = onSettings) { Text(tt("الإعدادات", "Settings")) } },
-            )
-        },
+        containerColor = MaterialTheme.colorScheme.background,
     ) { pad ->
         Column(
             Modifier.fillMaxSize().padding(pad).padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            Header(Store.planLabel(state.plan), onSettings)
             if (!state.signedIn && usage == null) {
                 WelcomeCard(onLogin)
             } else {
@@ -89,8 +92,8 @@ fun HomeScreen(
                     val session = usage.sessionAt(now)
                     val weekly = usage.weekly
                     val pace = weekly?.let { PaceCalc.compute(it, now) }
-                    if (s.showSession && session != null) LimitCard(tt("الخمس ساعات", "5-hour limit"), session, now, s)
-                    if (s.showWeek && weekly != null) LimitCard(tt("الأسبوع", "Weekly limit"), weekly, now, s)
+                    if (s.showSession && session != null) SessionCard(session, now, s)
+                    if (s.showWeek && weekly != null) WeekCard(weekly, pace, now, s)
                     if (s.showPace && pace != null) PaceCard(pace)
                     if (!s.showSession && !s.showWeek && !s.showPace) {
                         SectionCard {
@@ -141,25 +144,73 @@ private fun SessionExpiredCard(onLogin: () -> Unit) {
 }
 
 @Composable
-private fun LimitCard(title: String, limit: Limit, now: Long, s: Settings) {
+private fun Header(plan: String, onSettings: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.size(12.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
+            Text(tt("ليميت كلود", "Claude Limit"), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (plan.isNotEmpty()) Tag(plan)
+            TextButton(onClick = onSettings) { Text(tt("الإعدادات", "Settings")) }
+        }
+    }
+}
+
+@Composable
+private fun SessionCard(limit: Limit, now: Long, s: Settings) {
     val shown = if (s.showUsed) limit.usedPercent else limit.remainingPercent
     val color = levelColor(limit.usedPercent)
     SectionCard {
-        Label(title)
+        Label(tt("الخمس ساعات", "5-hour limit"))
+        Gap(8)
+        GaugeDial((shown / 100.0).toFloat(), null, color)
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Big("${shown.roundToInt()}%", color, 40)
+            Text(
+                if (s.showUsed) tt("مستخدم", "used") else tt("فاضل", "left"),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 8.dp, end = 8.dp, bottom = 8.dp),
+            )
+        }
+        val r = limit.resetsAtMs
+        if (s.showReset && r != null) {
+            Gap(4)
+            Text(
+                tt("بتتصفّر بعد ${TimeText.left(r - now, true)}", "Resets in ${TimeText.left(r - now, false)}"),
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun WeekCard(limit: Limit, pace: Pace?, now: Long, s: Settings) {
+    val shown = if (s.showUsed) limit.usedPercent else limit.remainingPercent
+    val color = levelColor(limit.usedPercent)
+    val marker = pace?.let { ((if (s.showUsed) it.expectedUsed else 100.0 - it.expectedUsed) / 100.0).toFloat() }
+    SectionCard {
+        Label(if (pace != null) tt("الأسبوع · يوم ${pace.dayNumber} من 7", "Weekly limit · day ${pace.dayNumber} of 7") else tt("الأسبوع", "Weekly limit"))
         Gap(4)
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Big("${shown.roundToInt()}%", color)
+            Big("${shown.roundToInt()}%", color, 36)
             Text(
                 if (s.showUsed) tt("مستخدم", "used") else tt("فاضل", "left"),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 6.dp),
             )
         }
-        Gap(8)
-        Bar((shown / 100.0).toFloat(), color)
+        Gap(6)
+        SegmentRow(7, (shown / 100.0).toFloat(), marker, color)
         val r = limit.resetsAtMs
         if (s.showReset && r != null) {
-            Gap(8)
+            Gap(6)
             Text(
                 tt("بتتصفّر بعد ${TimeText.left(r - now, true)}", "Resets in ${TimeText.left(r - now, false)}"),
                 style = MaterialTheme.typography.bodyMedium,
@@ -198,7 +249,7 @@ private fun PaceCard(p: Pace) {
         Gap(10)
         PaceBar((p.actualUsed / 100.0).toFloat(), (p.expectedUsed / 100.0).toFloat(), color)
         Gap(10)
-        Pill(status, color)
+        Tag(status, color)
         Gap(8)
         Text(
             tt(

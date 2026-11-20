@@ -65,6 +65,7 @@ class MainActivity : ComponentActivity() {
                     if (screen == "settings") {
                         SettingsScreen(
                             s = s,
+                            state = state,
                             signedIn = state.signedIn,
                             onBack = { screen = "home" },
                             onLogin = login,

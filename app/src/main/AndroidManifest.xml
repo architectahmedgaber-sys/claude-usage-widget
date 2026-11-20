@@ -50,6 +50,9 @@
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
 
+        <!-- The light timer behind refresh intervals under 15 minutes. -->
+        <receiver android:name=".work.TickReceiver" android:exported="false" />
+
         <receiver android:name=".widget.SessionWidgetReceiver" android:exported="true" android:label="@string/widget_session">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_session" />

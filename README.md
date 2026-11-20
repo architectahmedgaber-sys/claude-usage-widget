@@ -8,6 +8,10 @@ Android app and home-screen widgets that show how much of your Claude Pro/Max li
 
 Every number has its own widget, so you add only what you want. There is also an "All in one" widget whose rows follow the switches in Settings. Arabic first, English in Settings.
 
+**Widget look.** Each widget has its own style: rings, batteries, columns, bars, gauges or cells. Four colour sets (amber, teal, violet, paper) and a background from solid to clear. Widgets are drawn at their real size, so a small one keeps only the name and the number. A small white tick on every style shows where you should be by today. Settings has a live preview.
+
+**Refresh.** Every 1, 2, 5, 10, 15, 30 or 60 minutes. Under 15 minutes runs on a light timer while the phone is awake (Android's scheduler cannot go below 15 minutes); it uses more battery.
+
 ## Install
 
 Download the newest APK (always the same link):
@@ -29,4 +33,4 @@ GitHub Actions builds the APK on every push to `main` (`.github/workflows/build.
 
 The release key is kept in the repo (`signing/release.jks`) so every build installs over the previous one. This is a personal sideloaded app: if you fork it, make your own key.
 
-Credits: the WebView approach and the sign-in flow follow [Limits for Claude](https://github.com/Tattanu/limits-for-claude) (MIT). The look follows Pocketta.
+Credits: the WebView approach and the sign-in flow follow [Limits for Claude](https://github.com/Tattanu/limits-for-claude) (MIT). The widget style picker (rings, batteries, columns, bars) is inspired by Limits for Claude; the drawing code here is new.
