@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Intent
 import android.os.Bundle
 import android.webkit.CookieManager
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
@@ -40,17 +41,23 @@ class LoginActivity : Activity() {
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         root.addView(TextView(this).apply {
             text = Tx.t(
-                "١) اكتب إيميلك واضغط المتابعة بالإيميل.\n٢) افتح الإيميل واضغط الرابط: هيفتح في المتصفح ويطلعلك كود من 6 أرقام.\n٣) ارجع هنا واكتب الكود في الخانة.\nلو بتدخل بجوجل: اضغط المتابعة بجوجل.",
-                "1) Enter your email and continue with email.\n2) Open the email and tap the link: it opens in your browser and shows a 6-digit code.\n3) Come back here and type the code in the box.\nWith Google: tap Continue with Google.",
+                "١) اكتب إيميلك واضغط المتابعة بالإيميل.\n٢) افتح الإيميل واضغط الرابط: هيفتح في المتصفح ويطلعلك كود من 6 أرقام.\n٣) ارجع هنا واكتب الكود في الخانة.\nزرار جوجل مبيشتغلش جوه التطبيق (جوجل بترفضه). اكتب نفس إيميل حساب جوجل بتاعك بالطريقة دي.",
+                "1) Enter your email and continue with email.\n2) Open the email and tap the link: it opens in your browser and shows a 6-digit code.\n3) Come back here and type the code in the box.\nThe Google button does not work inside an app (Google refuses it). Type your Google account's email the way above.",
             )
             textSize = 14f
             setLineSpacing(0f, 1.15f)
             setPadding(pad, pad / 2, pad, pad / 2)
         })
-        root.addView(Button(this).apply {
+        val buttons = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        buttons.addView(Button(this).apply {
             text = Tx.t("افتح الإيميل", "Open email app")
             setOnClickListener { openMailApp() }
-        })
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        buttons.addView(Button(this).apply {
+            text = Tx.t("حمّل الصفحة تاني", "Reload page")
+            setOnClickListener { web.loadUrl("https://claude.ai/login") }
+        }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        root.addView(buttons)
         web = WebView(this)
         root.addView(web, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
         // Android draws apps edge to edge, so keep the page clear of the status bar and keyboard.
@@ -70,6 +77,19 @@ class LoginActivity : Activity() {
         web.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView, url: String) {
                 check(url)
+            }
+
+            // Google refuses to sign in inside an app's page (it ends in a 400 error), so stop there and explain.
+            override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                if (request.url.host?.endsWith("accounts.google.com") == true) {
+                    Toast.makeText(
+                        this@LoginActivity,
+                        Tx.t("جوجل مبيشتغلش هنا. اكتب إيميلك واختار المتابعة بالإيميل.", "Google does not work here. Type your email and choose Continue with email."),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                    return true
+                }
+                return false
             }
         }
         // Going to the mail app and back can reset the page, so the page is restored when we return.
