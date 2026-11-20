@@ -28,6 +28,8 @@ class DrawItem(
     /** Where you should be by now, 0..1, or null. */
     val marker: Float?,
     val sub: String,
+    /** Short line shown opposite [sub], e.g. where you should be by now. */
+    val note: String = "",
     /** How many cells the "cells" style splits this item into (10 for the 5-hour window, 7 for the week). */
     val segs: Int = 10,
 )
@@ -146,15 +148,24 @@ object WidgetDraw {
 
         // ---------------- rows: bars and cells ----------------
 
+        private fun measure(s: String, sizeDp: Float, mono: Boolean): Float {
+            tp.reset()
+            tp.typeface = if (mono) monoBold else sansBold
+            tp.textSize = dp(sizeDp)
+            return tp.measureText(s)
+        }
+
         fun rows(items: List<DrawItem>, r: RectF, segmented: Boolean) {
             val n = items.size
             if (n == 0) return
             val rowH = r.height() / n
             val rowDp = rowH / d
-            val textDp = (rowDp * 0.30f).coerceIn(9f, 14f)
+            val second = rowDp >= 42f && items.any { it.sub.isNotEmpty() || it.note.isNotEmpty() }
+            val textDp = if (second) (rowDp * 0.24f).coerceIn(9f, 13f) else (rowDp * 0.30f).coerceIn(9f, 14f)
             val valueDp = (textDp * 1.25f).coerceAtMost(18f)
-            val barDp = (rowDp * 0.22f).coerceIn(5f, 12f)
-            val blockDp = valueDp * 1.15f + 3f + barDp
+            val barDp = if (second) (rowDp * 0.16f).coerceIn(5f, 10f) else (rowDp * 0.22f).coerceIn(5f, 12f)
+            val subDp = (textDp * 0.8f).coerceIn(8f, 11f)
+            val blockDp = valueDp * 1.15f + 3f + barDp + (if (second) 3f + subDp * 1.25f else 0f)
             val startX = if (rtl) r.right else r.left
             val endX = if (rtl) r.left else r.right
             val startAlign = if (rtl) Paint.Align.RIGHT else Paint.Align.LEFT
@@ -163,14 +174,20 @@ object WidgetDraw {
                 val y0 = r.top + rowH * i + (rowH - dp(blockDp)) / 2f
                 val baseline = y0 + dp(valueDp)
                 val color = pal.levelColor(it.level)
-                val showSub = rowDp >= 46f && it.sub.isNotEmpty()
-                val title = if (showSub) it.title + " · " + it.sub else it.title
                 text(it.value, endX, baseline, valueDp, color, bold = true, mono = true, align = endAlign)
-                text(title, startX, baseline, textDp, pal.sub, align = startAlign, maxW = r.width() * 0.62f)
+                // The title never runs under the number: it gets what is left of the line.
+                val titleMax = (r.width() - measure(it.value, valueDp, true) - dp(10f)).coerceAtLeast(dp(20f))
+                text(it.title, startX, baseline, textDp, pal.sub, align = startAlign, maxW = titleMax)
                 val barTop = y0 + dp(valueDp * 1.15f + 3f)
                 val barH = dp(barDp)
                 if (segmented) segments(it, r.left, r.right, barTop, barH, color)
                 else bar(it, r.left, r.right, barTop, barH, color)
+                if (second) {
+                    val line2 = barTop + barH + dp(3f + subDp)
+                    val hasBoth = it.sub.isNotEmpty() && it.note.isNotEmpty()
+                    text(it.sub, startX, line2, subDp, pal.sub, align = startAlign, maxW = r.width() * (if (hasBoth) 0.58f else 1f))
+                    text(it.note, endX, line2, subDp, pal.ink, bold = true, align = endAlign, maxW = r.width() * (if (hasBoth) 0.40f else 1f))
+                }
             }
         }
 

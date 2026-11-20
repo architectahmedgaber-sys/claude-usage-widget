@@ -76,7 +76,8 @@ fun buildItems(kind: String, session: Limit?, weekly: Limit?, s: Settings, now: 
             Tx.t("فاضل ${TimeText.left(r - now, true)} على التجديد", "${TimeText.left(r - now, false)} until reset")
         } else ""
         val marker = expectedUsed?.let { e -> (e / 100.0).toFloat() }
-        return DrawItem(title, "${shown.roundToInt()}%", (shown / 100.0).toFloat().coerceIn(0f, 1f), levelOf(l.usedPercent), marker, sub, segs)
+        val note = expectedUsed?.let { e -> Tx.t("المفروض ${e.roundToInt()}%", "expected ${e.roundToInt()}%") } ?: ""
+        return DrawItem(title, "${shown.roundToInt()}%", (shown / 100.0).toFloat().coerceIn(0f, 1f), levelOf(l.usedPercent), marker, sub, note, segs)
     }
 
     val pace = weekly?.let { PaceCalc.compute(it, now) }
