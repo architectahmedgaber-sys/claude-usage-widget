@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import app.claudelimit.BuildConfig
 import app.claudelimit.Settings
 import app.claudelimit.Store
+import app.claudelimit.Tx
 import app.claudelimit.Updater
 import app.claudelimit.tt
 import app.claudelimit.widget.Widgets
@@ -158,14 +159,14 @@ fun SettingsScreen(s: Settings, signedIn: Boolean, onBack: () -> Unit, onLogin: 
                 )
                 Gap(10)
                 OutlinedButton(onClick = {
-                    updateStatus = tt("بدوّر...", "Checking...")
+                    updateStatus = Tx.t("بدوّر...", "Checking...")
                     scope.launch {
                         val r = Updater.check()
                         if (r != null) {
                             updateStatus = ""
                             onUpdateFound(r)
                         } else {
-                            updateStatus = tt("انت على آخر نسخة.", "You have the latest version.")
+                            updateStatus = Tx.t("انت على آخر نسخة.", "You have the latest version.")
                         }
                     }
                 }) { Text(tt("شوف لو في تحديث", "Check for updates")) }
