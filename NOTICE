@@ -1,0 +1,12 @@
+Claude Limit contains ideas and small pieces adapted from:
+
+Limits for Claude (https://github.com/Tattanu/limits-for-claude)
+MIT License, Copyright (c) 2026 Tattanu and contributors
+  - reading usage through an invisible WebView that shares the sign-in cookies
+  - the claude.ai sign-in screen with email-link and clipboard handling
+  - the shape of the usage JSON (limits list and legacy keys)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of that software and associated
+documentation files, to deal in it without restriction, subject to the inclusion of its copyright notice and
+permission notice in all copies or substantial portions of it. The software is provided "as is", without
+warranty of any kind.

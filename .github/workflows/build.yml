@@ -1,0 +1,90 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Publish a release with this version (e.g. 1.0.0). Leave empty for a test build."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Pick version
+        run: |
+          R="${{ github.event.inputs.release_version }}"
+          FILE_V="$(tr -d '[:space:]' < version.txt)"
+          if [[ -n "$R" ]]; then V="${R#v}"; echo "RELEASE=true" >> "$GITHUB_ENV";
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then V="${GITHUB_REF_NAME#v}"; echo "RELEASE=true" >> "$GITHUB_ENV";
+          elif [[ "$GITHUB_REF" == refs/heads/main && "${{ github.event_name }}" == "push" ]]; then
+            # Pushing to main publishes a release when version.txt names a version that has no release yet.
+            if git ls-remote --exit-code --tags origin "refs/tags/v$FILE_V" > /dev/null 2>&1; then
+              V="0.0.${{ github.run_number }}"
+              echo "v$FILE_V already released: test build only. Raise version.txt to publish a new release."
+            else
+              V="$FILE_V"; echo "RELEASE=true" >> "$GITHUB_ENV"
+            fi
+          else V="0.0.${{ github.run_number }}"; fi
+          echo "VERSION_NAME=$V" >> "$GITHUB_ENV"
+
+      - name: Unit tests and release build
+        run: |
+          set -o pipefail
+          ./gradlew :core:test assembleRelease -PversionName=$VERSION_NAME -PversionCode=${{ github.run_number }} --stacktrace 2>&1 | tee build.log
+
+      - name: Name the APK
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk "ClaudeLimit-$VERSION_NAME.apk"
+          cp app/build/outputs/apk/release/app-release.apk "ClaudeLimit.apk"
+          ls -lh ClaudeLimit*.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ClaudeLimit-${{ env.VERSION_NAME }}
+          path: ClaudeLimit-${{ env.VERSION_NAME }}.apk
+
+      - name: Publish release
+        if: env.RELEASE == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION_NAME }}
+          name: Claude Limit ${{ env.VERSION_NAME }}
+          target_commitish: ${{ github.sha }}
+          # ClaudeLimit.apk keeps the same name in every release, so
+          # https://github.com/architectahmedgaber-sys/claude-usage-widget/releases/latest/download/ClaudeLimit.apk
+          # always downloads the newest version.
+          files: |
+            ClaudeLimit-${{ env.VERSION_NAME }}.apk
+            ClaudeLimit.apk
+          generate_release_notes: true
+
+      # Leaves the end of the build log on a side branch so a failed build can be read without opening Actions.
+      - name: Save build log
+        if: always()
+        run: |
+          { echo "status: ${{ job.status }}"; echo "version: $VERSION_NAME"; echo "commit: $GITHUB_SHA"; echo; tail -n 300 build.log 2>/dev/null || echo "no build log"; } > /tmp/ci.log
+          git config user.name "ci"
+          git config user.email "ci@users.noreply.github.com"
+          git checkout --orphan ci-log
+          git rm -rf -q . || true
+          cp /tmp/ci.log build-status.log
+          git add build-status.log
+          git commit -q -m "build log for $GITHUB_SHA"
+          git push -f origin ci-log

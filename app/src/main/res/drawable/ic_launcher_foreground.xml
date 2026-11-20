@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- the empty ring -->
+    <path android:pathData="M54,32 A22,22 0 1,1 54,76 A22,22 0 1,1 54,32"
+        android:strokeColor="#55FFFFFF" android:strokeWidth="8" android:fillColor="#00000000" />
+    <!-- the part that is left: three quarters of the ring -->
+    <path android:pathData="M54,32 A22,22 0 1,1 32,54"
+        android:strokeColor="#FFFFFFFF" android:strokeWidth="8" android:strokeLineCap="round" android:fillColor="#00000000" />
+    <!-- a gold dot at the centre -->
+    <path android:pathData="M54,54 m-5,0 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" android:fillColor="#FFF6C453" />
+</vector>

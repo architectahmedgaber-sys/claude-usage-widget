@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">ليميت كلود</string>
+    <string name="widget_session">٥ ساعات</string>
+    <string name="widget_week">الأسبوع</string>
+    <string name="widget_pace">الخطة الأسبوعية</string>
+    <string name="widget_all">الكل في ويدجت</string>
+    <string name="widget_session_desc">الفاضل في ليميت الخمس ساعات ووقت تصفيره</string>
+    <string name="widget_week_desc">الفاضل في الليميت الأسبوعي ووقت تصفيره</string>
+    <string name="widget_pace_desc">المفروض تكون استهلكت قد إيه لحد النهارده، وانت استهلكت قد إيه</string>
+    <string name="widget_all_desc">الخمس ساعات والأسبوع والخطة، وانت تختار اللي يظهر من الإعدادات</string>
+    <string name="refresh_channel">تحديث الأرقام</string>
+    <string name="refresh_title">بحدّث أرقام الليميت</string>
+</resources>
